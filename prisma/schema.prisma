@@ -1,0 +1,137 @@
+// ============================================
+// SISTEMA DE GESTIÓN DE LICENCIAS
+// Base de datos para administrar licencias
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// TIPOS DE LICENCIA
+// ============================================
+
+enum TipoLicencia {
+  TRIAL
+  BASICO
+  PROFESIONAL
+  ENTERPRISE
+}
+
+enum EstadoLicencia {
+  PENDIENTE // Generada pero no activada
+  ACTIVA // Activada y en uso
+  EXPIRADA // Venció
+  SUSPENDIDA // Suspendida manualmente
+  REVOCADA // Revocada definitivamente
+}
+
+// ============================================
+// CLIENTES (Compradores de licencias)
+// ============================================
+
+model Cliente {
+  id        String  @id @default(cuid())
+  nombre    String
+  email     String  @unique
+  telefono  String?
+  empresa   String?
+  direccion String?
+  notas     String? @db.Text
+
+  licencias Licencia[]
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("clientes")
+}
+
+// ============================================
+// LICENCIAS
+// ============================================
+
+enum Producto {
+  BARBERIA
+  RESTAURANTE
+  ESCOLAR
+}
+
+model Licencia {
+  id            String         @id @default(cuid())
+  claveProducto String         @unique @map("clave_producto")
+  tipo          TipoLicencia   @default(TRIAL)
+  producto      Producto       @default(BARBERIA) // Nuevo campo
+  estado        EstadoLicencia @default(PENDIENTE)
+
+  maxUsuarios Int  @default(3) @map("max_usuarios")
+  maxClientes Int? @map("max_clientes")
+  diasValidez Int  @default(365) @map("dias_validez")
+
+  features String?  @db.Text
+  precio   Decimal? @db.Decimal(10, 2)
+  moneda   String   @default("PEN")
+
+  clienteId String?  @map("cliente_id")
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+
+  fechaActivacion  DateTime? @map("fecha_activacion")
+  fechaVencimiento DateTime? @map("fecha_vencimiento")
+
+  hardwareId         String? @map("hardware_id")
+  dominioInstalacion String? @map("dominio_instalacion")
+  ipInstalacion      String? @map("ip_instalacion")
+
+  vecesActivada      Int       @default(0) @map("veces_activada")
+  ultimaVerificacion DateTime? @map("ultima_verificacion")
+
+  notas String? @db.Text
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([claveProducto])
+  @@index([estado])
+  @@index([clienteId])
+  @@map("licencias")
+}
+
+// ============================================
+// HISTORIAL DE ACTIVACIONES
+// ============================================
+
+model HistorialActivacion {
+  id         String   @id @default(cuid())
+  licenciaId String   @map("licencia_id")
+  accion     String
+  ip         String?
+  userAgent  String?  @map("user_agent") @db.Text
+  hardwareId String?  @map("hardware_id")
+  detalles   String?  @db.Text
+  fecha      DateTime @default(now())
+
+  @@index([licenciaId])
+  @@index([fecha])
+  @@map("historial_activaciones")
+}
+
+// ============================================
+// USUARIOS ADMIN
+// ============================================
+
+model UsuarioAdmin {
+  id       String  @id @default(cuid())
+  nombre   String
+  email    String  @unique
+  password String
+  activo   Boolean @default(true)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("usuarios_admin")
+}
